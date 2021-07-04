@@ -1,0 +1,22 @@
+--- a/Source/compositorclient/RPI/CMakeLists.txt
++++ b/Source/compositorclient/RPI/CMakeLists.txt
+@@ -21,7 +21,9 @@
+ 
+ find_package(EGL REQUIRED)
+ 
+-if(VC6)
++option(VIDEO_CORE "Select video core version" "None")
++
++if(VIDEO_CORE STREQUAL "VC6")
+     find_package(GBM REQUIRED)
+     find_package(LibDRM REQUIRED)
+ 
+@@ -47,7 +49,7 @@
+         ${EGL_LIBRARIES}
+ )
+ 
+-if(VC6)
++if(VIDEO_CORE STREQUAL "VC6")
+     target_link_libraries(${TARGET}
+         PRIVATE
+             libdrm::libdrm

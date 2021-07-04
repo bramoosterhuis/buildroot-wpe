@@ -4,9 +4,12 @@
 #
 ################################################################################
 
-FREETYPE_VERSION = 2.6.5
+FREETYPE_VERSION = 2.7.1
 ifeq ($(BR2_PACKAGE_NETFLIX),y)
 FREETYPE_VERSION = 2.4.6
+endif
+ifeq ($(BR2_PACKAGE_NETFLIX52),y)
+FREETYPE_VERSION = 2.8
 endif
 FREETYPE_SOURCE = freetype-$(FREETYPE_VERSION).tar.bz2
 FREETYPE_SITE = http://download.savannah.gnu.org/releases/freetype

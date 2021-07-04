@@ -4,14 +4,27 @@
 #
 ################################################################################
 
+GST1_COMMON_VERSION = 59cb678164719ff59dcf6c8b93df4617a1075d11
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_10),y)
 GST1_COMMON_VERSION = ac2f647695e7bd4b433ea108ee1d0e23901797d4
-GST1_COMMON_SOURCE = common-$(GST1_COMMON_VERSION).tar.xz
-GST1_COMMON_SITE = http://cgit.freedesktop.org/gstreamer/common/snapshot
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_14),y)
+GST1_COMMON_VERSION = f0c2dc9aadfa05bb5274c40da750104ecbb88cba
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_16),y)
+GST1_COMMON_VERSION = 59cb678164719ff59dcf6c8b93df4617a1075d11
+endif
+
+GST1_COMMON_SOURCE = common-$(GST1_COMMON_VERSION).tar.bz2
+GST1_COMMON_SITE = "https://gitlab.freedesktop.org/gstreamer/common/repository/$(GST1_COMMON_VERSION)/archive.tar.bz2?filename="
 BR_NO_CHECK_HASH_FOR += $(GST1_COMMON_SOURCE)
 
 define GSTREAMER1_COMMON_EXTRACT
 	mkdir -p $(@D)/common
-	$(INFLATE.xz) $(DL_DIR)/$(GST1_COMMON_SOURCE) | \
+	$(INFLATE.bz2) $(DL_DIR)/$(GST1_COMMON_SOURCE) | \
 		$(TAR) --strip-components=1 -C $(@D)/common $(TAR_OPTIONS) -
 	mkdir -p $(@D)/m4
 	touch $(@D)/ABOUT-NLS

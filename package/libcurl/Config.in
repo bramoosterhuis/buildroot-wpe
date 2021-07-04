@@ -13,4 +13,15 @@ config BR2_PACKAGE_CURL
 	help
 	  Install curl binary as well
 
+config BR2_PACKAGE_LIBCURL_VERBOSE
+	bool "enable verbose strings"
+	help
+	  Enable verbose text strings
+
+config BR2_PACKAGE_LIBCURL_ENABLE_HTTP2
+	bool "enable HTTP2 support"
+	select BR2_PACKAGE_NGHTTP2
+	help
+		Enable HTTP2 support
+
 endif

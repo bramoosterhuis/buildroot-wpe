@@ -4,15 +4,29 @@
 #
 ################################################################################
 
-GSTREAMER1_VERSION = 1.8.2
+GSTREAMER1_VERSION = 1.16.2
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_10),y)
+GSTREAMER1_VERSION = 1.10.4
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_14),y)
+GSTREAMER1_VERSION = 1.14.4
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_16),y)
+GSTREAMER1_VERSION = 1.16.2
+endif
+
 GSTREAMER1_SOURCE = gstreamer-$(GSTREAMER1_VERSION).tar.xz
-GSTREAMER1_SITE = http://gstreamer.freedesktop.org/src/gstreamer
+GSTREAMER1_SITE = https://gstreamer.freedesktop.org/src/gstreamer
 GSTREAMER1_INSTALL_STAGING = YES
 GSTREAMER1_LICENSE_FILES = COPYING
 GSTREAMER1_LICENSE = LGPLv2+, LGPLv2.1+
 
 ifeq ($(BR2_PACKAGE_GSTREAMER1_GIT),y)
-GSTREAMER1_SITE = http://cgit.freedesktop.org/gstreamer/gstreamer/snapshot
+GSTREAMER1_SOURCE = gstreamer-$(GSTREAMER1_VERSION).tar.bz2
+GSTREAMER1_SITE = "https://gitlab.freedesktop.org/gstreamer/gstreamer/repository/$(GSTREAMER1_VERSION)/archive.tar.bz2?filename="
 BR_NO_CHECK_HASH_FOR += $(GSTREAMER1_SOURCE)
 GSTREAMER1_AUTORECONF = YES
 GSTREAMER1_AUTORECONF_OPTS = -I $(@D)/common/m4
@@ -32,7 +46,17 @@ ifeq ($(BR2_aarch64),y)
 GSTREAMER1_CONF_ENV = as_cv_unaligned_access=yes
 endif
 
+GSTREAMER1_EXTRA_COMPILER_OPTIONS =
+ifeq ($(BR2_PACKAGE_GSTREAMER1_SYMBOLS),y)
+GSTREAMER1_EXTRA_COMPILER_OPTIONS += -g
+ifeq ($(BR2_PACKAGE_GSTREAMER1_NO_OPTIMIZATIONS),y)
+GSTREAMER1_EXTRA_COMPILER_OPTIONS += -O0
+endif
+endif
+
+
 GSTREAMER1_CONF_OPTS = \
+	CFLAGS="$(TARGET_CFLAGS) $(GSTREAMER1_EXTRA_COMPILER_OPTIONS)" \
 	--disable-examples \
 	--disable-tests \
 	--disable-failing-tests \
@@ -45,20 +69,33 @@ GSTREAMER1_CONF_OPTS = \
 	$(if $(BR2_PACKAGE_GSTREAMER1_PLUGIN_REGISTRY),,--disable-registry) \
 	$(if $(BR2_PACKAGE_GSTREAMER1_INSTALL_TOOLS),,--disable-tools)
 
-GSTREAMER1_DEPENDENCIES = libglib2 host-pkgconf host-bison host-flex
+GSTREAMER1_DEPENDENCIES = \
+	host-bison \
+	host-flex \
+	host-pkgconf \
+	libglib2 \
+	$(if $(BR2_PACKAGE_LIBUNWIND),libunwind)
 
 ifeq ($(BR2_PACKAGE_GSTREAMER1_GIT),y)
 GSTREAMER1_DEPENDENCIES += gst1-common
 endif
 
-# gstreamer-1.6 changed the location of its gstconfig.h file,
-# and unfortunately, not all (by far!) consumers have been
-# updated to look in the correct location.
-# Add a symlink to the legacy location
-define GSTREAMER1_LEGACY_CGSTCONFIG_H
-	cd $(STAGING_DIR)/usr/include/gstreamer-1.0/gst && \
-		ln -sf ../../../lib/gstreamer-1.0/include/gst/gstconfig.h .
+ifeq ($(BR2_PACKAGE_VSS_SDK_MOVE_GSTREAMER),y)
+# this platform needs to run this gstreamer version parallel
+# to an older version.
+GSTREAMER1_AUTORECONF = YES
+GSTREAMER1_AUTORECONF_OPTS = -I $(@D)/common/m4
+GSTREAMER1_GETTEXTIZE = YES
+GSTREAMER1_CONF_OPTS += \
+	--datadir=/usr/share/gstreamer-wpe \
+	--datarootdir=/usr/share/gstreamer-wpe \
+	--sysconfdir=/etc/gstreamer-wpe \
+	--includedir=/usr/include/gstreamer-wpe \
+	--program-prefix wpe
+define GSTREAMER1_APPLY_VSS_FIX
+ package/vss-sdk/gst1/gst1.fix.sh ${@D}
 endef
-GSTREAMER1_POST_INSTALL_STAGING_HOOKS += GSTREAMER1_LEGACY_CGSTCONFIG_H
+GSTREAMER1_POST_PATCH_HOOKS += GSTREAMER1_APPLY_VSS_FIX
+endif
 
 $(eval $(autotools-package))

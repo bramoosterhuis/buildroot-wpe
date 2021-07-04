@@ -4,20 +4,23 @@
 #
 ################################################################################
 
-DOCKER_ENGINE_VERSION = v1.12.0-rc4
+DOCKER_ENGINE_VERSION = v17.03.0-ce
+DOCKER_ENGINE_COMMIT = 60ccb2265b0574d6c1c1090876a1d1ab32bed60e
 DOCKER_ENGINE_SITE = $(call github,docker,docker,$(DOCKER_ENGINE_VERSION))
 
 DOCKER_ENGINE_LICENSE = Apache-2.0
 DOCKER_ENGINE_LICENSE_FILES = LICENSE
 
-DOCKER_ENGINE_DEPENDENCIES = host-go
+DOCKER_ENGINE_DEPENDENCIES = host-go host-pkgconf
 
 DOCKER_ENGINE_GOPATH = "$(@D)/vendor"
 DOCKER_ENGINE_MAKE_ENV = $(HOST_GO_TARGET_ENV) \
 	CGO_ENABLED=1 \
 	CGO_NO_EMULATION=1 \
 	GOBIN="$(@D)/bin" \
-	GOPATH="$(DOCKER_ENGINE_GOPATH)"
+	GOPATH="$(DOCKER_ENGINE_GOPATH)" \
+	PKG_CONFIG="$(PKG_CONFIG_HOST_BINARY)" \
+	$(TARGET_MAKE_ENV)
 
 DOCKER_ENGINE_GLDFLAGS = \
 	-X main.GitCommit=$(DOCKER_ENGINE_VERSION) \
@@ -63,9 +66,13 @@ DOCKER_ENGINE_BUILD_TAGS += exclude_graphdriver_vfs
 endif
 
 define DOCKER_ENGINE_CONFIGURE_CMDS
+	mkdir -p $(DOCKER_ENGINE_GOPATH)/src/github.com/docker
 	ln -fs $(@D) $(DOCKER_ENGINE_GOPATH)/src/github.com/docker/docker
 	cd $(@D) && \
-		GITCOMMIT="unknown" BUILDTIME="$$(date)" VERSION="$(DOCKER_ENGINE_VERSION)" \
+		GITCOMMIT="$$(echo $(DOCKER_ENGINE_COMMIT) | head -c7)" \
+		BUILDTIME="$$(date)" \
+		VERSION="$(patsubst v%,%,$(DOCKER_ENGINE_VERSION))" \
+		PKG_CONFIG="$(PKG_CONFIG_HOST_BINARY)" $(TARGET_MAKE_ENV) \
 		bash ./hack/make/.go-autogen
 endef
 
@@ -94,7 +101,7 @@ define DOCKER_ENGINE_BUILD_CMDS
 			-o $(@D)/bin/$(target) \
 			-tags "$(DOCKER_ENGINE_BUILD_TAGS)" \
 			-ldflags "$(DOCKER_ENGINE_GLDFLAGS)" \
-			./cmd/$(target)
+			github.com/docker/docker/cmd/$(target)
 	)
 endef
 

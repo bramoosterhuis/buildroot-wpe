@@ -4,14 +4,28 @@
 #
 ################################################################################
 
-GST1_PLUGINS_GOOD_VERSION = 1.8.2
+GST1_PLUGINS_GOOD_VERSION = 1.16.2
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_10),y)
+GST1_PLUGINS_GOOD_VERSION = 1.10.4
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_14),y)
+GST1_PLUGINS_GOOD_VERSION = 1.14.4
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_16),y)
+GST1_PLUGINS_GOOD_VERSION = 1.16.2
+endif
+
 GST1_PLUGINS_GOOD_SOURCE = gst-plugins-good-$(GST1_PLUGINS_GOOD_VERSION).tar.xz
-GST1_PLUGINS_GOOD_SITE = http://gstreamer.freedesktop.org/src/gst-plugins-good
+GST1_PLUGINS_GOOD_SITE = https://gstreamer.freedesktop.org/src/gst-plugins-good
 GST1_PLUGINS_GOOD_LICENSE_FILES = COPYING
 GST1_PLUGINS_GOOD_LICENSE = LGPLv2.1+
 
 ifeq ($(BR2_PACKAGE_GSTREAMER1_GIT),y)
-GST1_PLUGINS_GOOD_SITE = http://cgit.freedesktop.org/gstreamer/gst-plugins-good/snapshot
+GST1_PLUGINS_GOOD_SOURCE = gst-plugins-good-$(GST1_PLUGINS_GOOD_VERSION).tar.bz2
+GST1_PLUGINS_GOOD_SITE = "https://gitlab.freedesktop.org/gstreamer/gst-plugins-good/repository/$(GST1_PLUGINS_GOOD_VERSION)/archive.tar.bz2?filename="
 BR_NO_CHECK_HASH_FOR += $(GST1_PLUGINS_GOOD_SOURCE)
 GST1_PLUGINS_GOOD_CONF_ENV += CFLAGS="$(TARGET_CFLAGS) -Wno-error"
 GST1_PLUGINS_GOOD_AUTORECONF = YES
@@ -23,6 +37,7 @@ GST1_PLUGINS_GOOD_POST_INSTALL_TARGET_HOOKS += GSTREAMER1_REMOVE_LA_FILES
 endif
 
 GST1_PLUGINS_GOOD_CONF_OPTS = \
+	CFLAGS="$(TARGET_CFLAGS) $(GSTREAMER1_EXTRA_COMPILER_OPTIONS)" \
 	--disable-valgrind \
 	--disable-examples \
 	--disable-directsound \
@@ -442,12 +457,37 @@ else
 GST1_PLUGINS_GOOD_CONF_OPTS += --disable-bz2
 endif
 
+ifeq ($(BR2_PACKAGE_GST1_PLUGINS_UGLY_PLUGIN_MPG123),y)
+GST1_PLUGINS_GOOD_CONF_OPTS += --enable-mpg123
+GST1_PLUGINS_GOOD_DEPENDENCIES += mpg123
+else
+GST1_PLUGINS_GOOD_CONF_OPTS += --disable-mpg123
+endif
+
 define GST1_PLUGINS_GOOD_APPLY_DORNE_PATCHES
 	$(APPLY_PATCHES) $(@D) package/gstreamer1/gst1-plugins-good/dorne *.patch
 endef
 
 ifeq ($(BR2_PACKAGE_GST1_PLUGINS_DORNE),y)
 GST1_PLUGINS_GOOD_POST_PATCH_HOOKS += GST1_PLUGINS_GOOD_APPLY_DORNE_PATCHES
+endif
+
+ifeq ($(BR2_PACKAGE_VSS_SDK_MOVE_GSTREAMER),y)
+# this platform needs to run this gstreamer version parallel
+# to an older version.
+GST1_PLUGINS_GOOD_AUTORECONF = YES
+GST1_PLUGINS_GOOD_AUTORECONF_OPTS = -I $(@D)/common/m4
+GST1_PLUGINS_GOOD_GETTEXTIZE = YES
+GST1_PLUGINS_GOOD_CONF_OPTS += \
+	--datadir=/usr/share/gstreamer-wpe \
+	--datarootdir=/usr/share/gstreamer-wpe \
+	--sysconfdir=/etc/gstreamer-wpe \
+	--includedir=/usr/include/gstreamer-wpe \
+	--program-prefix wpe
+define GST1_PLUGINS_GOOD_APPLY_VSS_FIX
+ package/vss-sdk/gst1/gst1.plugins.fix.sh ${@D}
+endef
+GST1_PLUGINS_GOOD_POST_PATCH_HOOKS += GST1_PLUGINS_GOOD_APPLY_VSS_FIX
 endif
 
 $(eval $(autotools-package))

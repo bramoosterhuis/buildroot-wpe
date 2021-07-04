@@ -4,15 +4,20 @@
 #
 ################################################################################
 
-RPI_USERLAND_VERSION = 7c026fa7a4ded2c525916cc853a32731c072ed1e
+RPI_USERLAND_VERSION = cdb5da59f939eb4078e90ed0e3c231c498ba9957
 RPI_USERLAND_SITE = $(call github,raspberrypi,userland,$(RPI_USERLAND_VERSION))
 RPI_USERLAND_LICENSE = BSD-3c
 RPI_USERLAND_LICENSE_FILES = LICENCE
 RPI_USERLAND_INSTALL_STAGING = YES
 RPI_USERLAND_CONF_OPTS = -DVMCS_INSTALL_PREFIX=/usr \
-	-DCMAKE_C_FLAGS="-DVCFILED_LOCKFILE=\\\"/var/run/vcfiled.pid\\\""
+	-DCMAKE_C_FLAGS="$(TARGET_CFLAGS) \
+		-DVCFILED_LOCKFILE=\\\"/var/run/vcfiled.pid\\\""
 
 RPI_USERLAND_PROVIDES = libegl libgles libopenmax libopenvg
+
+ifeq ($(BR2_aarch64),y)
+RPI_USERLAND_CONF_OPTS += -DARM64=ON
+endif
 
 ifeq ($(BR2_PACKAGE_WAYLAND),y)
 RPI_USERLAND_DEPENDENCIES += wayland
@@ -62,6 +67,9 @@ define RPI_USERLAND_POST_TARGET_CLEANUP
 	rm -f $(TARGET_DIR)/usr/share/install/vcfiled
 	rmdir --ignore-fail-on-non-empty $(TARGET_DIR)/usr/share/install
 	rm -Rf $(TARGET_DIR)/usr/src
+	ln -sfn libGLESv2.so $(TARGET_DIR)/usr/lib/libGLESv1_CM.so.1.0.0
+	ln -sfn libGLESv1_CM.so.1.0.0 $(TARGET_DIR)/usr/lib/libGLESv1_CM.so.1
+	ln -sfn libGLESv1_CM.so.1 $(TARGET_DIR)/usr/lib/libGLESv1_CM.so
 endef
 RPI_USERLAND_POST_INSTALL_TARGET_HOOKS += RPI_USERLAND_POST_TARGET_CLEANUP
 

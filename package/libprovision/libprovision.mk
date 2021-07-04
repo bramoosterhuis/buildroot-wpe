@@ -4,39 +4,13 @@
 #
 ################################################################################
 
-LIBPROVISION_VERSION = 9d77cc419d6c50f1a0ee82fa37415c0f7b5da89f
+LIBPROVISION_VERSION = 0ae89c7dd107f090d9a6e3827c22b7d89c5758ab
 LIBPROVISION_SITE_METHOD = git
 LIBPROVISION_SITE = git@github.com:Metrological/libprovision.git
 LIBPROVISION_LICENSE = PROPRIETARY
 LIBPROVISION_REDISTRIBUTE = NO
 LIBPROVISION_INSTALL_STAGING = YES
 
-LIBPROVISION_DEPENDENCIES = openssl cppsdk
+LIBPROVISION_DEPENDENCIES = openssl
 
-ifeq ($(BR2_PACKAGE_DXDRM),y)
-define LIBPROVISIONPROXY_INSTALL_STAGING
-	$(INSTALL) -m 755 $(@D)/$(call qstrip,$(BR2_ARCH))/libprovisionproxy.so $(STAGING_DIR)/usr/lib/libprovisionproxy.so
-endef
-define LIBPROVISIONPROXY_INSTALL_TARGET
-	$(INSTALL) -m 755 $(@D)/$(call qstrip,$(BR2_ARCH))/libprovisionproxy.so $(TARGET_DIR)/usr/lib/libprovisionproxy.so
-endef
-else
-define LIBPROVISIONPROXY_INSTALL_STAGING
-	$(INSTALL) -m 644 $(@D)/$(call qstrip,$(BR2_ARCH))/libprovisionproxy.a $(STAGING_DIR)/usr/lib/libprovisionproxy.a
-endef
-endif
-
-define LIBPROVISION_INSTALL_STAGING_CMDS
-	$(LIBPROVISIONPROXY_INSTALL_STAGING)
-	$(INSTALL) -m 755 $(@D)/$(call qstrip,$(BR2_ARCH))/libprovision.so $(STAGING_DIR)/usr/lib/libprovision.so
-	$(INSTALL) -d -m 755 $(STAGING_DIR)/usr/include/provision
-	$(INSTALL) -m 644 $(@D)/include/provision/*.h $(STAGING_DIR)/usr/include/provision
-	$(INSTALL) -m 644 $(@D)/provision.pc $(STAGING_DIR)/usr/lib/pkgconfig
-endef
-
-define LIBPROVISION_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 $(@D)/$(call qstrip,$(BR2_ARCH))/libprovision.so $(TARGET_DIR)/usr/lib/libprovision.so
-	$(LIBPROVISIONPROXY_INSTALL_TARGET)
-endef
-
-$(eval $(generic-package))
+$(eval $(cmake-package))

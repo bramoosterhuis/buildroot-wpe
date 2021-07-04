@@ -85,9 +85,8 @@ define $(2)_CONFIGURE_CMDS
 	cd $$($$(PKG)_BUILDDIR) && \
 	rm -f CMakeCache.txt && \
 	PATH=$$(BR_PATH) \
-	$$($$(PKG)_CONF_ENV) $$(HOST_DIR)/usr/bin/cmake $$($$(PKG)_SRCDIR) \
+	$$($$(PKG)_CONF_ENV) $$(BR2_CMAKE) $$($$(PKG)_SRCDIR) \
 		-DCMAKE_TOOLCHAIN_FILE="$$(HOST_DIR)/usr/share/buildroot/toolchainfile.cmake" \
-		-DCMAKE_BUILD_TYPE=$$(if $$(BR2_ENABLE_DEBUG),RelWithDebInfo,Release) \
 		-DCMAKE_INSTALL_PREFIX="/usr" \
 		-DCMAKE_COLOR_MAKEFILE=OFF \
 		-DBUILD_DOC=OFF \
@@ -110,7 +109,7 @@ define $(2)_CONFIGURE_CMDS
 	cd $$($$(PKG)_BUILDDIR) && \
 	rm -f CMakeCache.txt && \
 	PATH=$$(BR_PATH) \
-	$$(HOST_DIR)/usr/bin/cmake $$($$(PKG)_SRCDIR) \
+	$$($$(PKG)_CONF_ENV) $$(BR2_CMAKE) $$($$(PKG)_SRCDIR) \
 		-DCMAKE_INSTALL_SO_NO_EXE=0 \
 		-DCMAKE_FIND_ROOT_PATH="$$(HOST_DIR)" \
 		-DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM="BOTH" \
@@ -146,7 +145,7 @@ endif
 # primitives to find {C,LD}FLAGS, add it to the dependency list.
 $(2)_DEPENDENCIES += host-pkgconf
 
-$(2)_DEPENDENCIES += host-cmake
+$(2)_DEPENDENCIES += $(BR2_CMAKE_HOST_DEPENDENCY)
 
 #
 # Build step. Only define it if not already defined by the package .mk
@@ -220,12 +219,18 @@ else ifeq ($(BR2_ARM_CPU_ARMV6),y)
 CMAKE_SYSTEM_PROCESSOR_ARM_VARIANT = armv6
 else ifeq ($(BR2_ARM_CPU_ARMV7A),y)
 CMAKE_SYSTEM_PROCESSOR_ARM_VARIANT = armv7
+else ifeq ($(BR2_ARM_CPU_ARMV8),y)
+CMAKE_SYSTEM_PROCESSOR_ARM_VARIANT = armv8
 endif
 
 ifeq ($(BR2_arm),y)
 CMAKE_SYSTEM_PROCESSOR = $(CMAKE_SYSTEM_PROCESSOR_ARM_VARIANT)l
 else ifeq ($(BR2_armeb),y)
 CMAKE_SYSTEM_PROCESSOR = $(CMAKE_SYSTEM_PROCESSOR_ARM_VARIANT)b
+else ifeq ($(call qstrip,$(BR2_ARCH)),powerpc64)
+CMAKE_SYSTEM_PROCESSOR = ppc64
+else ifeq ($(call qstrip,$(BR2_ARCH)),powerpc64le)
+CMAKE_SYSTEM_PROCESSOR = ppc64le
 else
 CMAKE_SYSTEM_PROCESSOR = $(BR2_ARCH)
 endif
@@ -247,5 +252,9 @@ $(HOST_DIR)/usr/share/buildroot/toolchainfile.cmake:
 		-e 's#@@TARGET_FC@@#$(subst $(HOST_DIR)/,,$(call qstrip,$(TARGET_FC)))#' \
 		-e 's#@@CMAKE_SYSTEM_PROCESSOR@@#$(call qstrip,$(CMAKE_SYSTEM_PROCESSOR))#' \
 		-e 's#@@TOOLCHAIN_HAS_FORTRAN@@#$(if $(BR2_TOOLCHAIN_HAS_FORTRAN),1,0)#' \
+		-e 's#@@CMAKE_BUILD_TYPE@@#$(if $(BR2_ENABLE_DEBUG),Debug,Release)#' \
 		$(TOPDIR)/support/misc/toolchainfile.cmake.in \
 		> $@
+
+$(HOST_DIR)/usr/share/buildroot/Platform/Buildroot.cmake:
+	$(Q)$(INSTALL) -D -m 0644 support/misc/Buildroot.cmake $(@)

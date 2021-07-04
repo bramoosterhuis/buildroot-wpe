@@ -7,6 +7,7 @@ config BR2_PACKAGE_WESTEROS
 	select BR2_PACKAGE_WESTEROS_SIMPLEBUFFER
 	select BR2_PACKAGE_WESTEROS_SIMPLESHELL
 	select BR2_PACKAGE_WESTEROS_SOC
+	select BR2_PACKAGE_WESTEROS_SINK
 	help
 
 	  Westeros is an open source Wayland compositor library that allows
@@ -15,12 +16,13 @@ config BR2_PACKAGE_WESTEROS
           http://wayland.freedesktop.org/
 
 if BR2_PACKAGE_WESTEROS
+	config BR2_PACKAGE_WESTEROS_ESSOS
+	bool "westeros essos support"
+	help
+	 Enable essos in westeros
+
 	source "package/westeros-simpleshell/Config.in"	
 	source "package/westeros-simplebuffer/Config.in"
 	source "package/westeros-soc/Config.in"
-#rpi-userland is an EGL/GLES provider, so we can't select it
-config BR2_PACKAGE_WESTEROS_SOC_RPI
-	bool "RPi compositor"
-	depends on BR2_PACKAGE_RPI_USERLAND
-	select BR2_PACKAGE_WESTEROS_DISPMANX
+	source "package/westeros-sink/Config.in"
 endif #BR2_PACKAGE_WESTEROS

@@ -4,15 +4,29 @@
 #
 ################################################################################
 
-GST1_PLUGINS_UGLY_VERSION = 1.8.2
+GST1_PLUGINS_UGLY_VERSION = 1.16.2
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_10),y)
+GST1_PLUGINS_UGLY_VERSION = 1.10.4
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_14),y)
+GST1_PLUGINS_UGLY_VERSION = 1.14.4
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_16),y)
+GST1_PLUGINS_UGLY_VERSION = 1.16.2
+endif
+
 GST1_PLUGINS_UGLY_SOURCE = gst-plugins-ugly-$(GST1_PLUGINS_UGLY_VERSION).tar.xz
-GST1_PLUGINS_UGLY_SITE = http://gstreamer.freedesktop.org/src/gst-plugins-ugly
+GST1_PLUGINS_UGLY_SITE = https://gstreamer.freedesktop.org/src/gst-plugins-ugly
 GST1_PLUGINS_UGLY_LICENSE_FILES = COPYING
 # GPL licensed plugins will append to GST1_PLUGINS_UGLY_LICENSE if enabled.
 GST1_PLUGINS_UGLY_LICENSE = LGPLv2.1+
 
 ifeq ($(BR2_PACKAGE_GSTREAMER1_GIT),y)
-GST1_PLUGINS_UGLY_SITE = http://cgit.freedesktop.org/gstreamer/gst-plugins-ugly/snapshot
+GST1_PLUGINS_UGLY_SOURCE = gst-plugins-ugly-$(GST1_PLUGINS_UGLY_VERSION).tar.bz2
+GST1_PLUGINS_UGLY_SITE = "https://gitlab.freedesktop.org/gstreamer/gst-plugins-ugly/repository/$(GST1_PLUGINS_UGLY_VERSION)/archive.tar.bz2?filename="
 BR_NO_CHECK_HASH_FOR += $(GST1_PLUGINS_UGLY_SOURCE)
 GST1_PLUGINS_UGLY_AUTORECONF = YES
 GST1_PLUGINS_UGLY_AUTORECONF_OPTS = -I $(@D)/common/m4
@@ -26,6 +40,7 @@ endif
 GST1_PLUGINS_UGLY_CONF_OPTS = --disable-examples --disable-valgrind
 
 GST1_PLUGINS_UGLY_CONF_OPTS += \
+	CFLAGS="$(GSTREAMER1_EXTRA_COMPILER_OPTIONS)" \
 	--disable-a52dec \
 	--disable-amrnb \
 	--disable-amrwb \
@@ -114,7 +129,7 @@ endif
 ifeq ($(BR2_PACKAGE_GST1_PLUGINS_UGLY_PLUGIN_MPEG2DEC),y)
 GST1_PLUGINS_UGLY_CONF_OPTS += --enable-mpeg2dec
 GST1_PLUGINS_UGLY_DEPENDENCIES += libmpeg2
-GST1_PLUGINS_ULGY_HAS_GPL_LICENSE = y
+GST1_PLUGINS_UGLY_HAS_GPL_LICENSE = y
 else
 GST1_PLUGINS_UGLY_CONF_OPTS += --disable-mpeg2dec
 endif
@@ -134,5 +149,23 @@ endif
 
 # Use the following command to extract license info for plugins.
 # # find . -name 'plugin-*.xml' | xargs grep license
+
+ifeq ($(BR2_PACKAGE_VSS_SDK_MOVE_GSTREAMER),y)
+# this platform needs to run this gstreamer version parallel
+# to an older version.
+GST1_PLUGINS_UGLY_AUTORECONF = YES
+GST1_PLUGINS_UGLY_AUTORECONF_OPTS = -I $(@D)/common/m4
+GST1_PLUGINS_UGLY_GETTEXTIZE = YES
+GST1_PLUGINS_UGLY_CONF_OPTS += \
+	--datadir=/usr/share/gstreamer-wpe \
+	--datarootdir=/usr/share/gstreamer-wpe \
+	--sysconfdir=/etc/gstreamer-wpe \
+	--includedir=/usr/include/gstreamer-wpe \
+	--program-prefix wpe
+define GST1_PLUGINS_UGLY_APPLY_VSS_FIX
+ package/vss-sdk/gst1/gst1.plugins.fix.sh ${@D}
+endef
+GST1_PLUGINS_UGLY_POST_PATCH_HOOKS += GST1_PLUGINS_UGLY_APPLY_VSS_FIX
+endif
 
 $(eval $(autotools-package))

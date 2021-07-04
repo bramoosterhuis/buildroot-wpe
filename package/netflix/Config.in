@@ -5,6 +5,7 @@ config BR2_PACKAGE_NETFLIX
 	select BR2_PACKAGE_ICU
 	select BR2_PACKAGE_JPEG
 	select BR2_PACKAGE_WEBP
+	select BR2_PACKAGE_HARFBUZZ
 	select BR2_PACKAGE_FREETYPE
 	select BR2_PACKAGE_EXPAT
 	select BR2_PACKAGE_OPENSSL
@@ -36,9 +37,24 @@ config BR2_PACKAGE_NETFLIX_LIB
 
 endchoice
 
+config BR2_PACKAGE_NETFLIX_KEYMAP
+	string "keymap"
+	help
+	  Install custom keymap
+
 config BR2_PACKAGE_NETFLIX_GST_GL
 	bool "gl"
 	depends on BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_GL
+	default y
+
+config BR2_PACKAGE_NETFLIX_MARVEL
+	bool "marvel"
+	depends on BR2_PACKAGE_MARVELL_AMPSDK
+	default n
+
+config BR2_PACKAGE_NETFLIX_WESTEROS_SINK
+	bool "westeros-sink"
+	depends on BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR
 	default n
 
 endmenu

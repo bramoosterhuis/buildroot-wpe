@@ -4,14 +4,26 @@
 #
 ################################################################################
 
-GST_OMX_VERSION = 1.2.0
+GST_OMX_VERSION = 1.16.2
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_10),y)
+GST_OMX_VERSION = 1.10.4
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_14),y)
+GST_OMX_VERSION = 1.14.4
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_16),y)
+GST_OMX_VERSION = 1.16.2
+endif
+
 GST_OMX_SOURCE = gst-omx-$(GST_OMX_VERSION).tar.xz
-GST_OMX_SITE = http://gstreamer.freedesktop.org/src/gst-omx
+GST_OMX_SITE = https://gstreamer.freedesktop.org/src/gst-omx
 
 ifeq ($(BR2_PACKAGE_GSTREAMER1_GIT),y)
-GST_OMX_VERSION = e6792630a8f39fe30eb7ff8c13a779e067086b84
-GST_OMX_SOURCE = gst-omx-$(GST_OMX_VERSION).tar.xz
-GST_OMX_SITE = http://cgit.freedesktop.org/gstreamer/gst-omx/snapshot
+GST_OMX_SOURCE = gst-omx-$(GST_OMX_VERSION).tar.bz2
+GST_OMX_SITE = "https://gitlab.freedesktop.org/gstreamer/gst-omx/repository/$(GST_OMX_VERSION)/archive.tar.bz2?filename="
 BR_NO_CHECK_HASH_FOR += $(GST_OMX_SOURCE)
 GST_OMX_POST_DOWNLOAD_HOOKS += GSTREAMER1_COMMON_DOWNLOAD
 GST_OMX_POST_EXTRACT_HOOKS += GSTREAMER1_COMMON_EXTRACT
@@ -33,7 +45,8 @@ GST_OMX_CONF_ENV = \
 		-D_VIDEOCORE -DRASPBERRY_PI \
 		-I$(STAGING_DIR)/usr/include/IL \
 		-I$(STAGING_DIR)/usr/include/interface/vcos/pthreads \
-		-I$(STAGING_DIR)/usr/include/interface/vmcs_host/linux"
+		-I$(STAGING_DIR)/usr/include/interface/vmcs_host/linux \
+                $(GSTREAMER1_EXTRA_COMPILER_OPTIONS)"
 GST_OMX_DEPENDENCIES += gst1-plugins-bad
 endif
 
@@ -58,5 +71,6 @@ define GST_OMX_FIXUP_CONFIG_PATHS
 endef
 
 GST_OMX_POST_PATCH_HOOKS += GST_OMX_FIXUP_CONFIG_PATHS
+GST_OMX_POST_RSYNC_HOOKS += GST_OMX_FIXUP_CONFIG_PATHS
 
 $(eval $(autotools-package))

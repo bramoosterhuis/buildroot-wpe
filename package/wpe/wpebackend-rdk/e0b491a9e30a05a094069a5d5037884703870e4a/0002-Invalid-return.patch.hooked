@@ -1,0 +1,11 @@
+--- a/src/wpeframework/renderer-backend.cpp
++++ b/src/wpeframework/renderer-backend.cpp
+@@ -208,7 +208,7 @@
+     // get_native_window
+     [](void* data) -> EGLNativeWindowType
+     {
+-        return nullptr;
++        return (EGLNativeWindowType) 0;
+     },
+ };
+ 

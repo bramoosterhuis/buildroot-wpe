@@ -4,12 +4,18 @@
 #
 ################################################################################
 
-LIBCURL_VERSION = 7.50.1
+LIBCURL_VERSION = 7.53.1
 ifeq ($(BR2_PACKAGE_NETFLIX),y)
 LIBCURL_VERSION = 7.32.0
 endif
+ifeq ($(BR2_PACKAGE_NETFLIX5),y)
+LIBCURL_VERSION = 7.53.0
+endif
+ifeq ($(BR2_PACKAGE_NETFLIX52),y)
+LIBCURL_VERSION = 7.53.0
+endif
 LIBCURL_SOURCE = curl-$(LIBCURL_VERSION).tar.bz2
-LIBCURL_SITE = http://curl.haxx.se/download
+LIBCURL_SITE = https://curl.haxx.se/download
 LIBCURL_DEPENDENCIES = host-pkgconf \
 	$(if $(BR2_PACKAGE_ZLIB),zlib) \
 	$(if $(BR2_PACKAGE_LIBIDN),libidn) \
@@ -22,8 +28,15 @@ LIBCURL_INSTALL_STAGING = YES
 # on non-MMU platforms. Moreover, this authentication method is
 # probably almost never used. See
 # http://curl.haxx.se/docs/manpage.html#--ntlm.
-LIBCURL_CONF_OPTS = --disable-verbose --disable-manual --disable-ntlm-wb \
+LIBCURL_CONF_OPTS = --disable-manual --disable-ntlm-wb \
 	--enable-hidden-symbols --with-random=/dev/urandom --disable-curldebug
+
+ifeq ($(BR2_PACKAGE_LIBCURL_VERBOSE),y)
+LIBCURL_CONF_OPTS += --enable-verbose
+else
+LIBCURL_CONF_OPTS += --disable-verbose
+endif
+
 LIBCURL_CONFIG_SCRIPTS = curl-config
 
 ifeq ($(BR2_PACKAGE_OPENSSL),y)
@@ -66,6 +79,11 @@ else
 LIBCURL_CONF_OPTS += --without-libssh2
 endif
 
+ifeq ($(BR2_PACKAGE_LIBCURL_ENABLE_HTTP2),y)
+LIBCURL_CONF_OPTS += --with-nghttp2
+LIBCURL_DEPENDENCIES += nghttp2
+endif
+
 define LIBCURL_FIX_DOT_PC
 	printf 'Requires: openssl\n' >>$(@D)/libcurl.pc.in
 endef
@@ -78,4 +96,7 @@ endef
 LIBCURL_POST_INSTALL_TARGET_HOOKS += LIBCURL_TARGET_CLEANUP
 endif
 
+HOST_LIBCURL_DEPENDENCIES = host-openssl
+
 $(eval $(autotools-package))
+$(eval $(host-autotools-package))

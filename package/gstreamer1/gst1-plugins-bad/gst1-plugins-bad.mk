@@ -4,17 +4,31 @@
 #
 ################################################################################
 
-GST1_PLUGINS_BAD_VERSION = 1.8.2
+GST1_PLUGINS_BAD_VERSION = 1.16.2
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_10),y)
+GST1_PLUGINS_BAD_VERSION = 1.10.4
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_14),y)
+GST1_PLUGINS_BAD_VERSION = 1.14.4
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_16),y)
+GST1_PLUGINS_BAD_VERSION = 1.16.2
+endif
+
 GST1_PLUGINS_BAD_SOURCE = gst-plugins-bad-$(GST1_PLUGINS_BAD_VERSION).tar.xz
-GST1_PLUGINS_BAD_SITE = http://gstreamer.freedesktop.org/src/gst-plugins-bad
+GST1_PLUGINS_BAD_SITE = https://gstreamer.freedesktop.org/src/gst-plugins-bad
 GST1_PLUGINS_BAD_INSTALL_STAGING = YES
 GST1_PLUGINS_BAD_LICENSE_FILES = COPYING COPYING.LIB
 # Unknown and GPL licensed plugins will append to GST1_PLUGINS_BAD_LICENSE if
 # enabled.
-GST1_PLUGINS_BAD_LICENSE = LGPLv2+ LGPLv2.1+
+GST1_PLUGINS_BAD_LICENSE = LGPLv2+, LGPLv2.1+
 
 ifeq ($(BR2_PACKAGE_GSTREAMER1_GIT),y)
-GST1_PLUGINS_BAD_SITE = http://cgit.freedesktop.org/gstreamer/gst-plugins-bad/snapshot
+GST1_PLUGINS_BAD_SOURCE = gst-plugins-bad-$(GST1_PLUGINS_BAD_VERSION).tar.bz2
+GST1_PLUGINS_BAD_SITE = "https://gitlab.freedesktop.org/gstreamer/gst-plugins-bad/repository/$(GST1_PLUGINS_BAD_VERSION)/archive.tar.bz2?filename="
 BR_NO_CHECK_HASH_FOR += $(GST1_PLUGINS_BAD_SOURCE)
 GST1_PLUGINS_BAD_POST_DOWNLOAD_HOOKS += GSTREAMER1_COMMON_DOWNLOAD
 GST1_PLUGINS_BAD_POST_EXTRACT_HOOKS += GSTREAMER1_COMMON_EXTRACT
@@ -27,6 +41,7 @@ GST1_PLUGINS_BAD_AUTORECONF_OPTS = -I $(@D)/common/m4
 GST1_PLUGINS_BAD_GETTEXTIZE = YES
 
 GST1_PLUGINS_BAD_CONF_OPTS = \
+	CFLAGS="$(TARGET_CFLAGS) $(GSTREAMER1_EXTRA_COMPILER_OPTIONS)" \
 	--disable-examples \
 	--disable-valgrind \
 	--disable-directsound \
@@ -57,7 +72,6 @@ GST1_PLUGINS_BAD_CONF_OPTS += \
 	--disable-ladspa \
 	--disable-lv2 \
 	--disable-libde265 \
-	--disable-srtp \
 	--disable-linsys \
 	--disable-modplug \
 	--disable-mimic \
@@ -530,6 +544,12 @@ else
 GST1_PLUGINS_BAD_CONF_OPTS += --disable-stereo
 endif
 
+ifeq ($(BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_TIMECODE),y)
+GST1_PLUGINS_BAD_CONF_OPTS += --enable-timecode
+else
+GST1_PLUGINS_BAD_CONF_OPTS += --disable-timecode
+endif
+
 ifeq ($(BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_TTA),y)
 GST1_PLUGINS_BAD_CONF_OPTS += --enable-tta
 else
@@ -655,6 +675,14 @@ else
 GST1_PLUGINS_BAD_CONF_OPTS += --disable-fbdev
 endif
 
+ifeq ($(BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_FDK_AAC),y)
+GST1_PLUGINS_BAD_CONF_OPTS += --enable-fdk_aac
+GST1_PLUGINS_BAD_DEPENDENCIES += fdk-aac
+GST1_PLUGINS_BAD_HAS_UNKNOWN_LICENSE = y
+else
+GST1_PLUGINS_BAD_CONF_OPTS += --disable-fdk_aac
+endif
+
 ifeq ($(BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_GL),y)
 GST1_PLUGINS_BAD_CONF_OPTS += --enable-gl
 else
@@ -678,6 +706,13 @@ endif
 
 else
 GST1_PLUGINS_BAD_CONF_OPTS += --disable-hls
+endif
+
+ifeq ($(BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_KMS),y)
+GST1_PLUGINS_BAD_CONF_OPTS += --enable-kms
+GST1_PLUGINS_BAD_DEPENDENCIES += libdrm
+else
+GST1_PLUGINS_BAD_CONF_OPTS += --disable-kms
 endif
 
 ifeq ($(BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_LIBMMS),y)
@@ -786,6 +821,13 @@ else
 GST1_PLUGINS_BAD_CONF_OPTS += --disable-sndfile
 endif
 
+ifeq ($(BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_SRTP),y)
+GST1_PLUGINS_BAD_CONF_OPTS += --enable-srtp
+GST1_PLUGINS_BAD_DEPENDENCIES += libsrtp
+else
+GST1_PLUGINS_BAD_CONF_OPTS += --disable-srtp
+endif
+
 ifeq ($(BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_VCD),y)
 GST1_PLUGINS_BAD_CONF_OPTS += --enable-vcd
 else
@@ -804,6 +846,13 @@ GST1_PLUGINS_BAD_CONF_OPTS += --enable-webp
 GST1_PLUGINS_BAD_DEPENDENCIES += webp
 else
 GST1_PLUGINS_BAD_CONF_OPTS += --disable-webp
+endif
+
+ifeq ($(BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_WEBRTC),y)
+GST1_PLUGINS_BAD_CONF_OPTS += --enable-webrtc
+GST1_PLUGINS_BAD_DEPENDENCIES += webrtc-audio-processing
+else
+GST1_PLUGINS_BAD_CONF_OPTS += --disable-webrtc
 endif
 
 ifeq ($(BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_X265),y)
@@ -826,5 +875,23 @@ endif
 
 # Use the following command to extract license info for plugins.
 # # find . -name 'plugin-*.xml' | xargs grep license
+
+ifeq ($(BR2_PACKAGE_VSS_SDK_MOVE_GSTREAMER),y)
+# this platform needs to run this gstreamer version parallel
+# to an older one.
+GST1_PLUGINS_BAD_AUTORECONF = YES
+GST1_PLUGINS_BAD_AUTORECONF_OPTS = -I $(@D)/common/m4
+GST1_PLUGINS_BAD_GETTEXTIZE = YES
+GST1_PLUGINS_BAD_CONF_OPTS += \
+	--datadir=/usr/share/gstreamer-wpe \
+	--datarootdir=/usr/share/gstreamer-wpe \
+	--sysconfdir=/etc/gstreamer-wpe \
+	--includedir=/usr/include/gstreamer-wpe \
+	--program-prefix wpe
+define GST1_PLUGINS_BAD_APPLY_VSS_FIX
+ package/vss-sdk/gst1/gst1.plugins.fix.sh ${@D}
+endef
+GST1_PLUGINS_BAD_POST_PATCH_HOOKS += GST1_PLUGINS_BAD_APPLY_VSS_FIX
+endif
 
 $(eval $(autotools-package))

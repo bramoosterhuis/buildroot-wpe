@@ -95,6 +95,21 @@ define check_host_rpath
 endef
 GLOBAL_INSTRUMENTATION_HOOKS += check_host_rpath
 
+define step_check_build_dir_one
+	if [ -d $(2) ]; then \
+		printf "%s: installs files in %s\n" $(1) $(2) >&2; \
+		exit 1; \
+	fi
+endef
+
+define step_check_build_dir
+	$(if $(filter install-staging,$(2)),\
+		$(if $(filter end,$(1)),$(call step_check_build_dir_one,$(3),$(STAGING_DIR)/$(O))))
+	$(if $(filter install-target,$(2)),\
+		$(if $(filter end,$(1)),$(call step_check_build_dir_one,$(3),$(TARGET_DIR)/$(O))))
+endef
+GLOBAL_INSTRUMENTATION_HOOKS += step_check_build_dir
+
 # User-supplied script
 ifneq ($(BR2_INSTRUMENTATION_SCRIPTS),)
 define step_user
@@ -146,8 +161,8 @@ $(BUILD_DIR)/%/.stamp_extracted:
 # used.
 $(BUILD_DIR)/%/.stamp_rsynced:
 	@$(call MESSAGE,"Syncing from source dir $(SRCDIR)")
-	@test -d $(SRCDIR) || (echo "ERROR: $(SRCDIR) does not exist" ; exit 1)
 	$(foreach hook,$($(PKG)_PRE_RSYNC_HOOKS),$(call $(hook))$(sep))
+	@test -d $(SRCDIR) || (echo "ERROR: $(SRCDIR) does not exist" ; exit 1)
 	rsync -rlpcgoDu --chmod=u=rwX,go=rX $(RSYNC_VCS_EXCLUSIONS) $(call qstrip,$(SRCDIR))/ $(@D)
 	$(foreach hook,$($(PKG)_POST_RSYNC_HOOKS),$(call $(hook))$(sep))
 	$(Q)touch $@
@@ -317,6 +332,16 @@ be selected at a time. Please fix your configuration)
 endif
 endef
 
+define pkg-graph-depends
+	@$$(INSTALL) -d $$(GRAPHS_DIR)
+	@cd "$$(CONFIG_DIR)"; \
+	$$(TOPDIR)/support/scripts/graph-depends $$(BR2_GRAPH_DEPS_OPTS) \
+		-p $(1) $(2) -o $$(GRAPHS_DIR)/$$(@).dot
+	dot $$(BR2_GRAPH_DOT_OPTS) -T$$(BR_GRAPH_OUT) \
+		-o $$(GRAPHS_DIR)/$$(@).$$(BR_GRAPH_OUT) \
+		$$(GRAPHS_DIR)/$$(@).dot
+endef
+
 ################################################################################
 # inner-generic-package -- generates the make targets needed to build a
 # generic package
@@ -391,6 +416,12 @@ else
  $(2)_DL_VERSION := $$(strip $$($(2)_VERSION))
 endif
 $(2)_VERSION := $$(call sanitize,$$($(2)_DL_VERSION))
+
+$(2)_HASH_FILE = \
+	$$(strip \
+		$$(if $$(wildcard $$($(2)_PKGDIR)/$$($(2)_VERSION)/$$($(2)_RAWNAME).hash),\
+			$$($(2)_PKGDIR)/$$($(2)_VERSION)/$$($(2)_RAWNAME).hash,\
+			$$($(2)_PKGDIR)/$$($(2)_RAWNAME).hash))
 
 ifdef $(3)_OVERRIDE_SRCDIR
   $(2)_OVERRIDE_SRCDIR ?= $$($(3)_OVERRIDE_SRCDIR)
@@ -698,14 +729,14 @@ $(1)-show-version:
 $(1)-show-depends:
 			@echo $$($(2)_FINAL_ALL_DEPENDENCIES)
 
+$(1)-show-rdepends:
+			@echo $$($(2)_RDEPENDENCIES)
+
 $(1)-graph-depends: graph-depends-requirements
-			@$$(INSTALL) -d $$(GRAPHS_DIR)
-			@cd "$$(CONFIG_DIR)"; \
-			$$(TOPDIR)/support/scripts/graph-depends $$(BR2_GRAPH_DEPS_OPTS) \
-				-p $(1) -o $$(GRAPHS_DIR)/$$(@).dot
-			dot $$(BR2_GRAPH_DOT_OPTS) -T$$(BR_GRAPH_OUT) \
-				-o $$(GRAPHS_DIR)/$$(@).$$(BR_GRAPH_OUT) \
-				$$(GRAPHS_DIR)/$$(@).dot
+	$(call pkg-graph-depends,$(1),--direct)
+
+$(1)-graph-rdepends: graph-depends-requirements
+	$(call pkg-graph-depends,$(1),--reverse)
 
 $(1)-all-source:	$(1)-source
 $(1)-all-source:	$$(foreach p,$$($(2)_FINAL_ALL_DEPENDENCIES),$$(p)-all-source)
@@ -767,9 +798,9 @@ $$($(2)_TARGET_DIRCLEAN):		PKG=$(2)
 # kernel case, the bootloaders case, and the normal packages case.
 ifeq ($(1),linux)
 $(2)_KCONFIG_VAR = BR2_LINUX_KERNEL
-else ifneq ($$(filter boot/% $(BR2_EXTERNAL)/boot/%,$(pkgdir)),)
+else ifneq ($$(filter boot/% $$(foreach dir,$$(BR2_EXTERNAL_DIRS),$$(dir)/boot/%),$(pkgdir)),)
 $(2)_KCONFIG_VAR = BR2_TARGET_$(2)
-else ifneq ($$(filter toolchain/% $(BR2_EXTERNAL)/toolchain/%,$(pkgdir)),)
+else ifneq ($$(filter toolchain/% $$(foreach dir,$$(BR2_EXTERNAL_DIRS),$$(dir)/toolchain/%),$(pkgdir)),)
 $(2)_KCONFIG_VAR = BR2_$(2)
 else
 $(2)_KCONFIG_VAR = BR2_PACKAGE_$(2)
@@ -779,7 +810,6 @@ endif
 ifneq ($$($(2)_LICENSE_FILES),)
 $(2)_MANIFEST_LICENSE_FILES = $$($(2)_LICENSE_FILES)
 endif
-$(2)_MANIFEST_LICENSE_FILES ?= not saved
 
 # We need to extract and patch a package to be able to retrieve its
 # license files (if any) and the list of patches applied to it (if
@@ -808,7 +838,6 @@ ifneq ($$(call qstrip,$$($(2)_SOURCE)),)
 # is that the license still applies to the files distributed as part
 # of the rootfs, even if the sources are not themselves redistributed.
 ifeq ($$(call qstrip,$$($(2)_LICENSE_FILES)),)
-	@$$(call legal-license-nofiles,$$($(2)_RAW_BASE_NAME),$$(call UPPERCASE,$(4)))
 	@$$(call legal-warning-pkg,$$($(2)_RAW_BASE_NAME),cannot save license ($(2)_LICENSE_FILES not defined))
 else
 	@$$(foreach F,$$($(2)_LICENSE_FILES),$$(call legal-license-file,$$($(2)_RAW_BASE_NAME),$$(F),$$($(2)_DIR)/$$(F),$$(call UPPERCASE,$(4)))$$(sep))
@@ -856,6 +885,10 @@ $$(foreach pkg,$$($(2)_PROVIDES),\
 	$$(eval $$(call virt-provides-single,$$(pkg),$$(call UPPERCASE,$$(pkg)),$(1))$$(sep)))
 endif
 
+# Register package as a reverse-dependencies of all its dependencies
+$$(eval $$(foreach p,$$($(2)_FINAL_ALL_DEPENDENCIES),\
+	$$(call UPPERCASE,$$(p))_RDEPENDENCIES += $(1)$$(sep)))
+
 # Ensure unified variable name conventions between all packages Some
 # of the variables are used by more than one infrastructure; so,
 # rather than duplicating the checks in each infrastructure, we check
@@ -899,13 +932,7 @@ else ifeq ($$($(2)_SITE_METHOD),cvs)
 DL_TOOLS_DEPENDENCIES += cvs
 endif # SITE_METHOD
 
-# $(firstword) is used here because the extractor can have arguments, like
-# ZCAT="gzip -d -c", and to check for the dependency we only want 'gzip'.
-# Do not add xzcat to the list of required dependencies, as it gets built
-# automatically if it isn't found.
-ifneq ($$(call suitable-extractor,$$($(2)_SOURCE)),$$(XZCAT))
-DL_TOOLS_DEPENDENCIES += $$(firstword $$(call suitable-extractor,$$($(2)_SOURCE)))
-endif
+DL_TOOLS_DEPENDENCIES += $$(call extractor-dependency,$$($(2)_SOURCE))
 
 # Ensure all virtual targets are PHONY. Listed alphabetically.
 .PHONY:	$(1) \

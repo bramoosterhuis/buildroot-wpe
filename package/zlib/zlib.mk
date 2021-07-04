@@ -4,9 +4,13 @@
 #
 ################################################################################
 
-ZLIB_VERSION = 1.2.8
+ifeq ($(BR2_PACKAGE_RDK_VERSIONING),y)
+ZLIB_VERSION = 1.2.9
+else
+ZLIB_VERSION = 1.2.11
+endif
 ZLIB_SOURCE = zlib-$(ZLIB_VERSION).tar.xz
-ZLIB_SITE = http://downloads.sourceforge.net/project/libpng/zlib/$(ZLIB_VERSION)
+ZLIB_SITE = http://www.zlib.net
 ZLIB_LICENSE = zlib license
 ZLIB_LICENSE_FILES = README
 ZLIB_INSTALL_STAGING = YES
@@ -44,19 +48,19 @@ define HOST_ZLIB_CONFIGURE_CMDS
 endef
 
 define ZLIB_BUILD_CMDS
-	$(MAKE1) -C $(@D)
+	$(TARGET_MAKE_ENV) $(MAKE1) -C $(@D)
 endef
 
 define HOST_ZLIB_BUILD_CMDS
-	$(MAKE1) -C $(@D)
+	$(HOST_MAKE_ENV) $(MAKE1) -C $(@D)
 endef
 
 define ZLIB_INSTALL_STAGING_CMDS
-	$(MAKE1) -C $(@D) DESTDIR=$(STAGING_DIR) LDCONFIG=true install
+	$(TARGET_MAKE_ENV) $(MAKE1) -C $(@D) DESTDIR=$(STAGING_DIR) LDCONFIG=true install
 endef
 
 define ZLIB_INSTALL_TARGET_CMDS
-	$(MAKE1) -C $(@D) DESTDIR=$(TARGET_DIR) LDCONFIG=true install
+	$(TARGET_MAKE_ENV) $(MAKE1) -C $(@D) DESTDIR=$(TARGET_DIR) LDCONFIG=true install
 endef
 
 # We don't care removing the .a from target, since it not used at link
@@ -70,7 +74,7 @@ ZLIB_POST_INSTALL_STAGING_HOOKS += ZLIB_RM_STATIC_STAGING
 endif
 
 define HOST_ZLIB_INSTALL_CMDS
-	$(MAKE1) -C $(@D) LDCONFIG=true install
+	$(HOST_MAKE_ENV) $(MAKE1) -C $(@D) LDCONFIG=true install
 endef
 
 $(eval $(generic-package))

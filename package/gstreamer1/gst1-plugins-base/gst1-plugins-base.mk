@@ -4,15 +4,29 @@
 #
 ################################################################################
 
-GST1_PLUGINS_BASE_VERSION = 1.8.2
+GST1_PLUGINS_BASE_VERSION = 1.16.2
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_10),y)
+GST1_PLUGINS_BASE_VERSION = 1.10.4
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_14),y)
+GST1_PLUGINS_BASE_VERSION = 1.14.4
+endif
+
+ifeq ($(BR2_PACKAGE_GSTREAMER1_16),y)
+GST1_PLUGINS_BASE_VERSION = 1.16.2
+endif
+
 GST1_PLUGINS_BASE_SOURCE = gst-plugins-base-$(GST1_PLUGINS_BASE_VERSION).tar.xz
-GST1_PLUGINS_BASE_SITE = http://gstreamer.freedesktop.org/src/gst-plugins-base
+GST1_PLUGINS_BASE_SITE = https://gstreamer.freedesktop.org/src/gst-plugins-base
 GST1_PLUGINS_BASE_INSTALL_STAGING = YES
 GST1_PLUGINS_BASE_LICENSE_FILES = COPYING.LIB
 GST1_PLUGINS_BASE_LICENSE = LGPLv2+, LGPLv2.1+
 
 ifeq ($(BR2_PACKAGE_GSTREAMER1_GIT),y)
-GST1_PLUGINS_BASE_SITE = http://cgit.freedesktop.org/gstreamer/gst-plugins-base/snapshot
+GST1_PLUGINS_BASE_SOURCE = gst-plugins-base-$(GST1_PLUGINS_BASE_VERSION).tar.bz2
+GST1_PLUGINS_BASE_SITE = "https://gitlab.freedesktop.org/gstreamer/gst-plugins-base/repository/$(GST1_PLUGINS_BASE_VERSION)/archive.tar.bz2?filename="
 BR_NO_CHECK_HASH_FOR += $(GST1_PLUGINS_BASE_SOURCE)
 GST1_PLUGINS_BASE_AUTORECONF = YES
 GST1_PLUGINS_BASE_AUTORECONF_OPTS = -I $(@D)/common/m4
@@ -31,6 +45,7 @@ GST1_PLUGINS_BASE_CONF_ENV =
 
 # gio_unix_2_0 is only used for tests
 GST1_PLUGINS_BASE_CONF_OPTS = \
+	CFLAGS="$(TARGET_CFLAGS) $(GSTREAMER1_EXTRA_COMPILER_OPTIONS)" \
 	--disable-examples \
 	--disable-oggtest \
 	--disable-vorbistest \
@@ -220,6 +235,24 @@ GST1_PLUGINS_BASE_CONF_OPTS += --enable-vorbis
 GST1_PLUGINS_BASE_DEPENDENCIES += libvorbis
 else
 GST1_PLUGINS_BASE_CONF_OPTS += --disable-vorbis
+endif
+
+ifeq ($(BR2_PACKAGE_VSS_SDK_MOVE_GSTREAMER),y)
+# this platform needs to run this gstreamer version parallel
+# to an older version.
+GST1_PLUGINS_BASE_AUTORECONF = YES
+GST1_PLUGINS_BASE_AUTORECONF_OPTS = -I $(@D)/common/m4
+GST1_PLUGINS_BASE_GETTEXTIZE = YES
+GST1_PLUGINS_BASE_CONF_OPTS += \
+	--datadir=/usr/share/gstreamer-wpe \
+	--datarootdir=/usr/share/gstreamer-wpe \
+	--sysconfdir=/etc/gstreamer-wpe \
+	--includedir=/usr/include/gstreamer-wpe \
+	--program-prefix wpe
+define GST1_PLUGINS_BASE_APPLY_VSS_FIX
+ package/vss-sdk/gst1/gst1.plugins.fix.sh ${@D}
+endef
+GST1_PLUGINS_BASE_POST_PATCH_HOOKS += GST1_PLUGINS_BASE_APPLY_VSS_FIX
 endif
 
 $(eval $(autotools-package))
